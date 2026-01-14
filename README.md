@@ -1,157 +1,138 @@
 # secure-rbac-auth-api-bnc
 
-API REST para autenticação e autorização baseada em perfis e permissões (**RBAC – Role-Based Access Control**), garantindo que **nenhuma rota sensível** seja acessada sem autorização explícita, mesmo se o usuário tentar “forçar” a URL diretamente.
+API REST (NestJS + TypeScript) com **RBAC** (roles + permissions).
 
+- Rotas protegidas exigem `Authorization: Bearer <token>`
+- **401**: token inválido/expirado
+- **403**: token válido, mas sem permissão `{ resource, action }`
 
-## Objetivo do case
+## Rodar com Docker (recomendado)
 
-Em aplicações web, um problema comum de segurança ocorre quando o usuário não possui permissão funcional, mas consegue acessar um recurso digitando diretamente a URL no navegador ou chamando a rota via API.  
-Aqui, a API deve garantir que **todas as rotas protegidas validem JWT** e **chequem permissões (resource + action)** automaticamente.
-
-## Regras técnicas (requisitos)
-
-- Rotas protegidas devem exigir `Authorization: Bearer <token>`
-- Extrair e validar o **JWT antes** de verificar permissões
-- Retornar **401** se o token for inválido/expirado
-- Retornar **403** se o usuário não tiver permissão necessária
-- Stack alvo:
-  - Node.js (**NestJS**) com TypeScript
-  - ORM (**TypeORM** ou **Prisma**)
-  - **SQL Server**
-  - **JWT**
-  - **Docker**
-
-## Rotas obrigatórias
-
-### `POST /api/auth/login`
-
-Autentica um usuário e retorna um token JWT para ser usado nas próximas requisições.
-
-- **Body (mínimo)**:
-  - `email` (string)
-  - `password` (string)
-
-### `POST /api/permissions/assign`
-
-Atribui permissões a um perfil (role) específico.
-
-- **Acesso**: **apenas administradores**
-- **Header obrigatório**: `Authorization: Bearer <token>`
-- **Body (mínimo)**:
-  - `roleId` (number): ID do perfil que receberá a permissão
-  - `resource` (string): recurso/rota liberada (ex.: `/usuarios`, `/dashboard`)
-  - `action` (string): ação permitida (`GET`, `POST`, `PUT`, `DELETE`, ou `*` para todas)
-- **Regras de negócio**:
-  - Somente usuários com perfil de administrador podem executar
-  - Validar se `roleId` existe
-  - Validar se a combinação `resource + action` **não** existe para aquele perfil
-  - Registrar data/hora da atribuição
-
-## Contrato de autorização (RBAC)
-
-### Modelo de permissão
-
-- **Permission**: `{ resource: string, action: string }`
-  - `resource`: caminho lógico da rota (ex.: `/dashboard`, `/relatorios`, `/usuarios`)
-  - `action`: método HTTP (`GET`, `POST`, `PUT`, `DELETE`) ou `*`
-
-### Política sugerida
-
-- Uma requisição `GET /api/dashboard` requer permissão:
-  - `resource: "/dashboard"` e `action: "GET"` (ou `action: "*"`)
-- O `resource` deve ser normalizado (ex.: sempre com `/` inicial)
-- O `action` deve ser normalizado para maiúsculo
-
-## Exemplos de resposta
-
-### Exemplo (autorizado)
-
-`GET /api/dashboard`
-
-```json
-{
-  "success": true,
-  "data": {
-    "message": "Acesso autorizado ao dashboard",
-    "content": {}
-  }
-}
-```
-
-### Exemplo (sem permissão – 403)
-
-`GET /api/relatorios`
-
-```json
-{
-  "success": false,
-  "error": {
-    "code": "FORBIDDEN",
-    "message": "Você não tem permissão para acessar este recurso",
-    "details": {
-      "requiredPermission": {
-        "resource": "/usuarios",
-        "action": "GET"
-      },
-      "yourPermissions": [
-        { "resource": "/dashboard", "action": "GET" },
-        { "resource": "/relatorios", "action": "GET" }
-      ]
-    }
-  }
-}
-```
-
-### Exemplo (token inválido/expirado – 401)
-
-```json
-{
-  "success": false,
-  "error": {
-    "code": "UNAUTHORIZED",
-    "message": "Token inválido ou expirado"
-  }
-}
-```
-
-## Variáveis de ambiente (sugestão)
-
-Crie um arquivo `.env` (ou configure via Docker):
-
-```bash
-# App
-PORT=3000
-NODE_ENV=development
-
-# JWT
-JWT_SECRET=troque-este-segredo
-JWT_EXPIRES_IN=1h
-
-# SQL Server
-DB_HOST=localhost
-DB_PORT=1433
-DB_USER=sa
-DB_PASSWORD=YourStrong!Passw0rd
-DB_NAME=secure_rbac_auth
-```
-
-```bash
-npm install
-npm run start:dev
-```
-
-API (por padrão): `http://localhost:3000`
-
-## Executando com Docker
-
+Configure variáveis (opcional): veja `env.example`.
 
 ```bash
 docker compose up --build
 ```
 
+API: `http://localhost:3000/api`
 
+### Produção (segurança)
 
+Em `NODE_ENV=production`, o app **falha no boot** se:
+- `JWT_SECRET` / `JWE_SECRET` não estiverem definidos com **>= 32 chars**
+- `TOKEN_ISSUER` / `TOKEN_AUDIENCE` não estiverem definidos
 
+### Enterprise (tokens)
 
+- **Access token**: inclui `tokenVersion` (invalidação imediata sem blacklist).
+- **Refresh token**: tabela `RefreshToken` com **rotação**, **revogação** e **detecção de reuse** (se um refresh já revogado for apresentado, revoga tudo do usuário).
 
+## Rodar local (usando o SQL Server do Docker)
 
+Copie as variáveis de ambiente de `env.local` para seu `.env` (ou exporte no shell).  
+Observação: este repo bloqueia `.env` por padrão, então mantemos um `env.local` versionado para facilitar avaliação.
+
+```bash
+docker compose up -d mssql
+npm install
+npm run prisma:generate
+npm run prisma:migrate:deploy
+npm run prisma:seed
+npm run start:dev
+```
+
+## Credenciais (seed)
+
+- **Admin**: `admin@local.test` / `Admin@123`
+- **User**: `user@local.test` / `User@123`
+
+## Rotas
+
+- `POST /api/auth/login`
+- `POST /api/auth/register` (**cria sempre com role USER**)
+- `POST /api/auth/refresh` (renova tokens com rotação)
+- `POST /api/auth/logout` (revoga refresh token atual)
+- `POST /api/permissions/assign` (**apenas ADMIN**)
+- `GET /api/dashboard` (rota protegida de exemplo)
+- `GET /api/relatorios` (rota protegida de exemplo)
+
+## Exemplos (curl)
+
+Login:
+
+```bash
+curl -X POST http://localhost:3000/api/auth/login ^
+  -H "Content-Type: application/json" ^
+  -d "{\"email\":\"admin@local.test\",\"password\":\"Admin@123\"}"
+```
+
+Register (senha forte exemplo: `Deusmeama16#`):
+
+```bash
+curl -X POST http://localhost:3000/api/auth/register ^
+  -H "Content-Type: application/json" ^
+  -d "{\"email\":\"novo@local.test\",\"password\":\"Deusmeama16#\"}"
+```
+
+Refresh:
+
+```bash
+curl -X POST http://localhost:3000/api/auth/refresh ^
+  -H "Content-Type: application/json" ^
+  -d "{\"refreshToken\":\"REFRESH_TOKEN\"}"
+```
+
+Logout (substitua TOKEN):
+
+```bash
+curl -X POST http://localhost:3000/api/auth/logout ^
+  -H "Authorization: Bearer TOKEN" ^
+  -H "Content-Type: application/json" ^
+  -d "{}"
+```
+
+Dashboard (substitua TOKEN):
+
+```bash
+curl http://localhost:3000/api/dashboard ^
+  -H "Authorization: Bearer TOKEN"
+```
+
+Assign permission (admin):
+
+```bash
+curl -X POST http://localhost:3000/api/permissions/assign ^
+  -H "Authorization: Bearer TOKEN" ^
+  -H "Content-Type: application/json" ^
+  -d "{\"roleId\":2,\"resource\":\"/relatorios\",\"action\":\"GET\"}"
+```
+
+## Arquitetura (resumo)
+
+- `src/modules/auth`: login + register (hash `argon2`)
+- `src/modules/permissions`: assign + rotas protegidas de exemplo
+- `src/shared/security`: `TokenService` (JWE com JWT interno), `JweAuthGuard` (401) e `PermissionsGuard` (403)
+- `src/shared/http`: respostas e mensagens centralizadas (`ApiMessages`, interceptor e exception filter)
+- Fluxo: valida Bearer/JWE → `req.user` → RBAC automático por `{ resource, action }`
+
+## Decisões de segurança (curto e direto)
+
+### JWE (por que usar)
+O enunciado pede JWT (Bearer). Aqui o token é um **JWE** contendo um **JWT assinado** (nested JWT):
+- **Prós**: confidencialidade (claims não ficam legíveis no cliente/logs)
+- **Contras**: mais complexidade e custo; **não substitui HTTPS**
+
+### Refresh token (enterprise)
+- **Armazenamento**: hash (SHA-256) no banco (nunca o token puro)
+- **Rotação**: cada `refresh` gera um novo token e revoga o anterior
+- **Reuse detection**: se um refresh revogado reaparecer, tratamos como comprometimento e revogamos todos os refresh tokens do usuário + incrementamos `tokenVersion`
+
+### Headers (helmet)
+Ativado para reduzir superfície de ataque:
+- **clickjacking**: bloqueio de frame
+- **XSS/headers**: headers recomendados (`noSniff`, `referrer-policy`, etc)
+- **CSP**: opcional (habilite com `HELMET_CSP_ENABLED=true` quando fizer sentido)
+
+### Rate limit
+- Global via `@nestjs/throttler`
+- Login com limite mais restrito

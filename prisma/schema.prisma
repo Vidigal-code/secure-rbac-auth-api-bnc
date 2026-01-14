@@ -1,0 +1,87 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlserver"
+  url      = env("DATABASE_URL")
+}
+
+model Role {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  createdAt DateTime @default(now())
+
+  users       User[]
+  permissions Permission[]
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+
+  /// Usuário ativo (bloqueio imediato sem depender de expiração de token).
+  isActive Boolean @default(true)
+
+  /// Invalidação imediata de access tokens sem blacklist:
+  /// ao incrementar, qualquer token antigo vira inválido.
+  tokenVersion Int @default(0)
+
+  roleId Int
+  role   Role @relation(fields: [roleId], references: [id])
+
+  audits PermissionAssignmentAudit[] @relation("AuditActor")
+
+  refreshTokens RefreshToken[]
+}
+
+/// Refresh tokens com rotação (enterprise):
+/// - Armazena hash (nunca o token puro)
+/// - Detecta reuse (token revogado apresentado) e revoga tudo
+model RefreshToken {
+  id        Int      @id @default(autoincrement())
+  tokenHash String   @unique
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+  revokedAt DateTime?
+
+  /// Encadeamento da rotação (auditoria/forense)
+  replacedByTokenHash String?
+
+  /// Opcional: telemetria de segurança
+  createdByIp        String?
+  createdByUserAgent String?
+
+  userId Int
+  user   User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+model Permission {
+  id         Int      @id @default(autoincrement())
+  roleId     Int
+  resource   String
+  action     String
+  assignedAt DateTime @default(now())
+
+  role Role @relation(fields: [roleId], references: [id])
+
+  @@unique([roleId, resource, action])
+}
+
+model PermissionAssignmentAudit {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+
+  actorUserId Int?
+  actorUser   User? @relation("AuditActor", fields: [actorUserId], references: [id])
+
+  roleId   Int
+  resource String
+  action   String
+}
+
+
