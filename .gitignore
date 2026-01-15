@@ -4,7 +4,7 @@ node_modules/
 # build
 dist/
 coverage/
-
+coverage-db/
 # env files
 .env
 .env.*
