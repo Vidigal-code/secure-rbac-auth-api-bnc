@@ -6,6 +6,18 @@ API REST (NestJS + TypeScript) com **RBAC** (roles + permissions) e SQL Server.
 - **401**: token inválido/expirado
 - **403**: token válido, sem permissão `{ resource, action }`
 
+## Swagger (OpenAPI)
+
+- **UI**: `http://localhost:3000/docs`
+- **OpenAPI JSON**: `http://localhost:3000/docs-json`
+
+> Observação: o Swagger roda por padrão fora de produção. Em `NODE_ENV=production`, ele fica desabilitado.
+
+## Formato de resposta (padrão)
+
+- **Sucesso**: `{"success": true, "data": ...}`
+- **Erro**: `{"success": false, "error": { "code": "...", "message": "...", "details"?: ... }}`
+
 ## Como rodar (Docker)
 
 ```bash
@@ -13,6 +25,22 @@ docker compose up --build
 ```
 
 API: `http://localhost:3000/api`
+
+## Como rodar (local)
+
+1) Copie `env.example` para `.env` e ajuste o necessário.
+
+2) Instale dependências:
+
+```bash
+npm install
+```
+
+3) Suba:
+
+```bash
+npm run start:dev
+```
 
 ## Como testar (TDD ponta a ponta via Docker)
 
@@ -83,6 +111,17 @@ curl.exe -s -X POST http://localhost:3000/api/permissions/assign ^
 
 ### Produção (secrets)
 Em `NODE_ENV=production`, o app falha no boot se `JWT_SECRET`/`JWE_SECRET` (**>= 32 chars**) e `TOKEN_ISSUER`/`TOKEN_AUDIENCE` não estiverem definidos.
+
+### Variáveis de ambiente (principais)
+
+- **`PORT`**: porta da API (default 3000)
+- **`CORS_ORIGINS`**: origens permitidas (separadas por vírgula)
+- **`HELMET_CSP_ENABLED`**: habilita CSP do Helmet (`true/false`)
+- **`SWAGGER_ENABLED`**: habilita Swagger fora de produção (`true/false`)
+- **`JWT_SECRET` / `JWE_SECRET`**: secrets dos tokens (produção exige >= 32 chars)
+- **`JWT_EXPIRES_IN_SECONDS` / `REFRESH_EXPIRES_IN_SECONDS`**: expiração dos tokens
+- **`TOKEN_ISSUER` / `TOKEN_AUDIENCE`**: issuer/audience validados no verify (obrigatórios em produção)
+- **`DATABASE_URL`**: conexão SQL Server (opcional fora do docker compose)
 
 ### Tokens (enterprise)
 - **Access token**: inclui `tokenVersion` (invalidação imediata no logout/revogação, sem blacklist).
