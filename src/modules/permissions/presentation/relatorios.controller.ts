@@ -32,14 +32,13 @@ export class RelatoriosController {
   @Get()
   @ApiOperation({
     summary: 'Relatórios (exemplo de rota protegida por RBAC)',
-    description:
-      [
-        'Rota protegida por autenticação + RBAC.',
-        '',
-        'Permissão requerida (calculada automaticamente):',
-        '- `resource`: `/relatorios`',
-        '- `action`: `GET`',
-      ].join('\n'),
+    description: [
+      'Rota protegida por autenticação + RBAC.',
+      '',
+      'Permissão requerida (calculada automaticamente):',
+      '- `resource`: `/relatorios`',
+      '- `action`: `GET`',
+    ].join('\n'),
   })
   @ApiOkResponse({
     description: 'Acesso autorizado aos relatórios.',

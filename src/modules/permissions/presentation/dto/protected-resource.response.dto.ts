@@ -16,5 +16,3 @@ export class ProtectedResourceResponseDto {
   })
   content!: Record<string, unknown>;
 }
-
-

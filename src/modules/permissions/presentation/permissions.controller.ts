@@ -43,15 +43,14 @@ export class PermissionsController {
   @Post('assign')
   @ApiOperation({
     summary: 'Atribuir permissão a um role (ADMIN)',
-    description:
-      [
-        'Cria uma permissão `(roleId, resource, action)` para um perfil.',
-        '',
-        'Regras importantes:',
-        '- `action` permitido: `GET`, `POST`, `PUT`, `DELETE` ou `*`.',
-        '- `resource` é normalizado (sempre começa com `/`). Use `*` para liberar qualquer recurso.',
-        '- A rota é **ADMIN-only** e ainda passa pelo RBAC: o ADMIN precisa ter permissão para `POST /permissions/assign` (ou `*/*`).',
-      ].join('\n'),
+    description: [
+      'Cria uma permissão `(roleId, resource, action)` para um perfil.',
+      '',
+      'Regras importantes:',
+      '- `action` permitido: `GET`, `POST`, `PUT`, `DELETE` ou `*`.',
+      '- `resource` é normalizado (sempre começa com `/`). Use `*` para liberar qualquer recurso.',
+      '- A rota é **ADMIN-only** e ainda passa pelo RBAC: o ADMIN precisa ter permissão para `POST /permissions/assign` (ou `*/*`).',
+    ].join('\n'),
   })
   @ApiBody({ type: AssignPermissionDto })
   @ApiCreatedResponse({
@@ -89,7 +88,10 @@ export class PermissionsController {
             code: 'FORBIDDEN',
             message: 'Você não tem permissão para acessar este recurso',
             details: {
-              requiredPermission: { resource: '/permissions/assign', action: 'POST' },
+              requiredPermission: {
+                resource: '/permissions/assign',
+                action: 'POST',
+              },
               yourPermissions: [{ resource: '/dashboard', action: 'GET' }],
             },
           },

@@ -51,5 +51,3 @@ export class ApiSuccessResponseDto {
   })
   data!: unknown;
 }
-
-

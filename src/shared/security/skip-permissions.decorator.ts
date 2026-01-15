@@ -9,5 +9,3 @@ import { SKIP_PERMISSIONS_KEY } from './security.constants';
  * Útil para rotas como `/auth/logout`, que devem ser acessíveis a qualquer usuário autenticado.
  */
 export const SkipPermissions = () => SetMetadata(SKIP_PERMISSIONS_KEY, true);
-
-

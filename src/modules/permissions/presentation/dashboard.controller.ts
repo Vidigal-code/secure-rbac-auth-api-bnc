@@ -32,16 +32,15 @@ export class DashboardController {
   @Get()
   @ApiOperation({
     summary: 'Dashboard (exemplo de rota protegida por RBAC)',
-    description:
-      [
-        'Rota protegida por autenticação + RBAC.',
-        '',
-        'Permissão requerida (calculada automaticamente):',
-        '- `resource`: `/dashboard`',
-        '- `action`: `GET`',
-        '',
-        'Dica: para liberar este endpoint a um perfil, crie uma permissão com `resource="/dashboard"` e `action="GET"` (ou `*`).',
-      ].join('\n'),
+    description: [
+      'Rota protegida por autenticação + RBAC.',
+      '',
+      'Permissão requerida (calculada automaticamente):',
+      '- `resource`: `/dashboard`',
+      '- `action`: `GET`',
+      '',
+      'Dica: para liberar este endpoint a um perfil, crie uma permissão com `resource="/dashboard"` e `action="GET"` (ou `*`).',
+    ].join('\n'),
   })
   @ApiOkResponse({
     description: 'Acesso autorizado ao dashboard.',
