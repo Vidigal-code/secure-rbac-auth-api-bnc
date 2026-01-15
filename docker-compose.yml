@@ -10,10 +10,32 @@ services:
     volumes:
       - mssql_data:/var/opt/mssql
 
+  # Inicializa bancos (DEV/TEST) caso não existam.
+  # Execute uma vez: `docker compose run --rm mssql-init`
+  mssql-init:
+    image: mcr.microsoft.com/mssql-tools:latest
+    depends_on:
+      - mssql
+    environment:
+      MSSQL_SA_PASSWORD: "${DB_PASSWORD:-YourStrong!Passw0rd}"
+      DB_NAME: "${DB_NAME:-secure_rbac_auth}"
+      DB_TEST_NAME: "${DB_TEST_NAME:-secure_rbac_auth_test}"
+    tty: false
+    stdin_open: false
+    command:
+      [
+        "sh",
+        "-c",
+        "SQLCMD=/opt/mssql-tools/bin/sqlcmd; i=1; while [ $$i -le 60 ]; do $$SQLCMD -b -S mssql -U sa -P \"$$MSSQL_SA_PASSWORD\" -d master -Q \"SET NOCOUNT ON; SELECT 1;\" >/dev/null 2>&1 && break; echo \"waiting for mssql...\"; sleep 2; i=$$((i+1)); done; DB=\"$$DB_NAME\"; DBT=\"$$DB_TEST_NAME\"; $$SQLCMD -b -S mssql -U sa -P \"$$MSSQL_SA_PASSWORD\" -d master -Q \"SET NOCOUNT ON; IF DB_ID(N'$$DB') IS NULL CREATE DATABASE [$$DB];\"; $$SQLCMD -b -S mssql -U sa -P \"$$MSSQL_SA_PASSWORD\" -d master -Q \"SET NOCOUNT ON; IF DB_ID(N'$$DBT') IS NULL CREATE DATABASE [$$DBT];\";",
+      ]
+
   api:
     build: .
     depends_on:
-      - mssql
+      mssql:
+        condition: service_started
+      mssql-init:
+        condition: service_completed_successfully
     environment:
       PORT: "3000"
       NODE_ENV: "${NODE_ENV:-development}"
@@ -31,6 +53,46 @@ services:
       SEED_USER_PASSWORD: "${SEED_USER_PASSWORD:-User@123}"
     ports:
       - "3000:3000"
+
+  # TDD + cobertura (sem DB real). Gera `./coverage` no host.
+  test:
+    build:
+      context: .
+      target: build
+    environment:
+      NODE_ENV: "test"
+    tty: false
+    stdin_open: false
+    volumes:
+      - ./coverage:/app/coverage
+    command: ["npm", "run", "test:cov"]
+
+  # TDD + cobertura usando DB real do Docker. Gera `./coverage-db` no host.
+  test-db:
+    build:
+      context: .
+      target: build
+    depends_on:
+      mssql:
+        condition: service_started
+      mssql-init:
+        condition: service_completed_successfully
+    environment:
+      NODE_ENV: "test"
+      RUN_DB_TESTS: "true"
+      DB_PASSWORD: "${DB_PASSWORD:-YourStrong!Passw0rd}"
+      DB_TEST_NAME: "${DB_TEST_NAME:-secure_rbac_auth_test}"
+      DATABASE_URL: "sqlserver://mssql:1433;database=${DB_TEST_NAME:-secure_rbac_auth_test};user=sa;password=${DB_PASSWORD:-YourStrong!Passw0rd};encrypt=true;trustServerCertificate=true"
+    tty: false
+    stdin_open: false
+    volumes:
+      - ./coverage-db:/app/coverage
+    command:
+      [
+        "sh",
+        "-lc",
+        "for i in $(seq 1 60); do nc -z mssql 1433 && break; echo \"Aguardando SQL Server (mssql:1433)...\"; sleep 2; done; npm run test:cov",
+      ]
 
 volumes:
   mssql_data:

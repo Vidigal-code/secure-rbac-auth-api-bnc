@@ -15,6 +15,8 @@ FROM deps AS build
 WORKDIR /app
 
 COPY tsconfig.json tsconfig.build.json nest-cli.json eslint.config.mjs ./
+COPY prisma.config.ts ./
+COPY scripts ./scripts
 COPY src ./src
 
 RUN npm run build
@@ -33,6 +35,8 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 COPY prisma ./prisma
 COPY package.json ./package.json
+COPY prisma.config.ts ./prisma.config.ts
+COPY scripts ./scripts
 COPY tsconfig.json ./tsconfig.json
 COPY tsconfig.build.json ./tsconfig.build.json
 

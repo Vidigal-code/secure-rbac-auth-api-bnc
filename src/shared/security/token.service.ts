@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import * as crypto from 'crypto';
 import { createHash } from 'crypto';
-import { CompactEncrypt, compactDecrypt, jwtVerify, SignJWT } from 'jose';
+import { compactDecrypt, CompactEncrypt, jwtVerify, SignJWT } from 'jose';
 
 export type TokenPayload = {
   userId: number;
@@ -50,10 +50,14 @@ export class TokenService {
     if (isProd) {
       // Em produção, falhe rápido se secrets estiverem ausentes ou fracos.
       if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
-        throw new Error('JWT_SECRET ausente/fraco (produção exige >= 32 chars).');
+        throw new Error(
+          'JWT_SECRET ausente/fraco (produção exige >= 32 chars).',
+        );
       }
       if (!process.env.JWE_SECRET || process.env.JWE_SECRET.length < 32) {
-        throw new Error('JWE_SECRET ausente/fraco (produção exige >= 32 chars).');
+        throw new Error(
+          'JWE_SECRET ausente/fraco (produção exige >= 32 chars).',
+        );
       }
       if (!process.env.TOKEN_ISSUER) {
         throw new Error('TOKEN_ISSUER ausente (obrigatório em produção).');
@@ -127,7 +131,7 @@ export class TokenService {
       .setJti(crypto.randomUUID())
       .sign(this.jwtKey);
 
-    const jwe = await new CompactEncrypt(new TextEncoder().encode(jwt))
+    return await new CompactEncrypt(new TextEncoder().encode(jwt))
       .setProtectedHeader({
         alg: 'dir',
         enc: 'A256GCM',
@@ -135,8 +139,6 @@ export class TokenService {
         typ: 'JWE',
       })
       .encrypt(this.jweKey);
-
-    return jwe;
   }
 
   /**
@@ -166,7 +168,13 @@ export class TokenService {
       throw new Error('TokenType inválido');
     }
 
-    if (!userId || !roleId || !roleName || !email || Number.isNaN(tokenVersion)) {
+    if (
+      !userId ||
+      !roleId ||
+      !roleName ||
+      !email ||
+      Number.isNaN(tokenVersion)
+    ) {
       throw new Error('Payload inválido');
     }
 

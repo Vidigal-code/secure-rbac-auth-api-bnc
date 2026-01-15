@@ -33,7 +33,7 @@ export class RefreshUseCase {
       }
 
       const payload = verified.payload;
-      const userId = payload.userId;
+      //const userId = payload.userId;
 
       const prisma = this.prisma as any;
       const providedHash = this.tokenService.hashToken(refreshToken);

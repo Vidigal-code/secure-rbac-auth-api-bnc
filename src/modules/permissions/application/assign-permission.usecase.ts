@@ -53,7 +53,7 @@ export class AssignPermissionUseCase {
           data: { roleId, resource, action },
         });
 
-        await tx.permissionAssignmentAudit.create({
+        tx.permissionAssignmentAudit.create({
           data: {
             actorUserId: input.actorUserId,
             roleId,

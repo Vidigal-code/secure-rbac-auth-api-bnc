@@ -7,7 +7,11 @@ import {
 import { Reflector } from '@nestjs/core';
 import { PrismaService } from '../prisma/prisma.service';
 import { ApiMessages } from '../http/api-messages';
-import { ADMIN_ONLY_KEY, IS_PUBLIC_KEY } from './security.constants';
+import {
+  ADMIN_ONLY_KEY,
+  IS_PUBLIC_KEY,
+  SKIP_PERMISSIONS_KEY,
+} from './security.constants';
 import { extractResourceFromRequest } from './security.utils';
 
 /**
@@ -29,6 +33,11 @@ export class PermissionsGuard implements CanActivate {
       context.getClass(),
     ]);
     if (isPublic) return true;
+
+    const skipPermissions = this.reflector.getAllAndOverride<boolean>(
+      SKIP_PERMISSIONS_KEY,
+      [context.getHandler(), context.getClass()],
+    );
 
     const req = context.switchToHttp().getRequest();
     const user = req.user;
@@ -70,6 +79,10 @@ export class PermissionsGuard implements CanActivate {
 
     req.user.roleId = dbUser.roleId;
     req.user.roleName = dbUser.role.name;
+
+    if (skipPermissions) {
+      return true;
+    }
 
     const adminOnly = this.reflector.getAllAndOverride<boolean>(
       ADMIN_ONLY_KEY,

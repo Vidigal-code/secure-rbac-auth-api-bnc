@@ -6,7 +6,10 @@ export function normalizeResource(resource: string): string {
   if (!trimmed) return '/';
   const withSlash = trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
   // Remove trailing slash (exceto raiz)
-  return withSlash.length > 1 ? withSlash.replace(/\/+$/, '') : withSlash;
+  if (withSlash.length <= 1) return withSlash;
+  const noTrailing = withSlash.replace(/\/+$/, '');
+  // Caso especial: input como "///" vira string vazia após remover trailing slashes.
+  return noTrailing ? noTrailing : '/';
 }
 
 /**
@@ -19,5 +22,12 @@ export function extractResourceFromRequest(req: any): string {
 
   // Ex.: baseUrl "/dashboard" + routePath "/" => "/dashboard"
   const raw = `${baseUrl}${routePath === '/' ? '' : routePath}`;
-  return normalizeResource(raw || req?.path || '/');
+  const normalized = normalizeResource(raw || req?.path || '/');
+
+  // Nest globalPrefix: `api` (main.ts) não deve fazer parte do resource lógico do RBAC.
+  // Ex.: "/api/dashboard" => "/dashboard"
+  if (normalized === '/api') return '/';
+  if (normalized.startsWith('/api/')) return normalized.slice('/api'.length);
+
+  return normalized;
 }

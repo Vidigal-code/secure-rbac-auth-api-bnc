@@ -10,15 +10,19 @@
     "prebuild": "prisma generate",
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
-    "prestart": "prisma generate",
-    "prestart:dev": "prisma generate",
-    "prestart:prod": "prisma generate",
-    "start": "nest start",
-    "start:dev": "nest start --watch",
-    "start:debug": "nest start --debug --watch",
-    "start:prod": "node dist/main",
+    "prestart": "node scripts/run-with-env.cjs -- prisma generate && node scripts/run-with-env.cjs -- prisma migrate deploy",
+    "prestart:dev": "node scripts/run-with-env.cjs -- prisma generate && node scripts/run-with-env.cjs -- prisma migrate deploy",
+    "prestart:prod": "node scripts/run-with-env.cjs -- prisma generate && node scripts/run-with-env.cjs -- prisma migrate deploy",
+    "start": "node scripts/run-with-env.cjs -- nest start",
+    "start:dev": "node scripts/run-with-env.cjs -- nest start --watch",
+    "start:debug": "node scripts/run-with-env.cjs -- nest start --debug --watch",
+    "start:prod": "node scripts/run-with-env.cjs -- node dist/main",
     "prelint": "prisma generate",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
+    "docker:db:init": "docker compose run --rm mssql-init",
+    "docker:test": "docker compose up --build --abort-on-container-exit --exit-code-from test-db test-db",
+    "docker:test:unit": "docker compose run --rm test",
+    "docker:test:db": "docker compose up --build --abort-on-container-exit --exit-code-from test-db test-db",
     "prisma:generate": "prisma generate",
     "prisma:migrate:dev": "prisma migrate dev",
     "prisma:migrate:deploy": "prisma migrate deploy",
@@ -81,10 +85,25 @@
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"
     },
+    "transformIgnorePatterns": [
+      "node_modules/(?!jose/)"
+    ],
     "collectCoverageFrom": [
-      "**/*.(t|j)s"
+      "**/*.ts",
+      "!**/*.d.ts"
     ],
     "coverageDirectory": "../coverage",
-    "testEnvironment": "node"
+    "testEnvironment": "node",
+    "setupFilesAfterEnv": [
+      "<rootDir>/tests/jest.setup.ts"
+    ],
+    "coverageThreshold": {
+      "global": {
+        "branches": 0,
+        "functions": 100,
+        "lines": 100,
+        "statements": 100
+      }
+    }
   }
 }

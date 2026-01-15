@@ -8,7 +8,7 @@ import { ApiExceptionFilter } from './shared/http/api-exception.filter';
 import { ApiResponseInterceptor } from './shared/http/api-response.interceptor';
 import { PrismaService } from './shared/prisma/prisma.service';
 
-async function bootstrap() {
+export async function bootstrap() {
   const app = await NestFactory.create(AppModule, { cors: false });
 
   // CORS (restrito por env). Em produção, configure CORS_ORIGINS com domínios permitidos.
@@ -61,4 +61,7 @@ async function bootstrap() {
   await app.listen(port);
 }
 
-void bootstrap();
+// Evita side-effects durante testes unitários/integrados.
+if (process.env.NODE_ENV !== 'test') {
+  void bootstrap();
+}

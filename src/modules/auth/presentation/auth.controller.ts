@@ -8,6 +8,7 @@ import { RegisterDto } from './dto/register.dto';
 import { RefreshUseCase } from '../application/refresh.usecase';
 import { RefreshDto } from './dto/refresh.dto';
 import { LogoutUseCase } from '../application/logout.usecase';
+import { SkipPermissions } from '../../../shared/security/skip-permissions.decorator';
 
 /**
  * Controller de autenticação.
@@ -56,6 +57,7 @@ export class AuthController {
   /**
    * Logout (revoga refresh token atual).
    */
+  @SkipPermissions()
   @Post('logout')
   async logout(@Body() _body: unknown, @Req() req: any) {
     return this.logoutUseCase.execute({ userId: req.user.userId });
