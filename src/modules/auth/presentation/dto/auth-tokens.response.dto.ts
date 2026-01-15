@@ -27,5 +27,3 @@ export class AuthTokensResponseDto {
   })
   refreshToken!: string;
 }
-
-
